@@ -98,6 +98,14 @@ To guarantee truly zero `malloc` calls in the hot loop, thread arenas exploit ma
 - On macOS, `MAP_PRIVATE | MAP_ANON` overcommits by default — the XNU kernel lazily allocates physical pages only upon first write (page fault). The arena appears infinite from the thread's perspective, with zero risk of mid-loop allocation stalls. (Note: `MAP_NORESERVE` is Linux-specific and does not exist on Darwin.)
 - This eliminates the traditional arena exhaustion problem (e.g., deep `node_modules` trees blowing past a naively-sized arena).
 
+### Real-Time UI Progress Bar (Lock-Free)
+
+A directory crawler inherently does not know the exact file count percentage until the crawl finishes. Instead, Artemis uses a **Heuristic Progress Bar**:
+- A dedicated UI thread wakes up every 100ms.
+- Worker threads populate `_Atomic` metrics (`live_scanned_bytes`, `live_path`) into their 128-byte aligned `ThreadState`.
+- The UI thread samples these atomic metrics completely lock-free.
+- It calculates an estimated percentage by comparing the aggregated scanned bytes against the APFS container's total capacity, rendering a smooth 60fps ANSI bar without ever blocking the hot `getattrlistbulk` loop.
+
 ### Error Handling Policy
 
 The hot loop must expect transient filesystem errors and never crash on a single bad file:
@@ -213,11 +221,15 @@ typedef struct {
 
 macOS Finder (since OS X Snow Leopard) and commercial tools like DaisyDisk exclusively use **Base-10** math for storage (1 GB = 1,000,000,000 bytes). Artemis aligns with this convention to avoid terrifying users with apparent "missing space" discrepancies (which can be up to ~22GB on a 500GB SSD when using Base-2 GiB).
 
-### Hidden Space (Matching DaisyDisk)
+### Hidden Space & System Alignment (Matching DaisyDisk and Finder)
 
 Artemis replicates DaisyDisk's "Hidden Space" metric to account for APFS local snapshots (Time Machine), the sealed System volume, and the intentionally-skipped Sandbox/iCloud folders mentioned above.
-Instead of attempting to manually track complex APFS shared-block snapshot extents, Artemis relies on simple filesystem truth:
-`Hidden Space = (Total APFS Container Blocks Used from statfs) - (Sum of physical bytes of all Scanned Files)`
+
+Instead of naively using the C `<sys/param.h>` `statfs()` kernel API (which returns the strict physical block consumption and includes hidden OS files like the VM swapfile), Artemis bridges into the natively-linked `CoreFoundation` framework.
+It calls `CFURLCopyResourcePropertyForKey` with `kCFURLVolumeAvailableCapacityForImportantUsageKey` to query the exact macOS dynamically-calculated opportunistic capacity. 
+
+By calculating `Total Volume Used = Total Capacity - Opportunistic Capacity`, Artemis's final output perfectly aligns 1-to-1 with the macOS "About This Mac -> Storage" UI widget, and cleanly buckets the unseen storage into the "Hidden Space" metric:
+`Hidden Space = (Total Volume Used) - (Sum of physical bytes of all Scanned Files)`
 
 ### Phase 1: Size Report
 
