@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 #include <sys/param.h>
 #include <sys/mount.h>
+#include <CoreFoundation/CoreFoundation.h>
 
 #define TOP_N_DEFAULT 20
 
@@ -131,11 +132,32 @@ int main(int argc, char* argv[]) {
     }
     uint64_t root_inode = (uint64_t)root_stat.st_ino;
 
-    // Get Total Volume Used for Progress Bar Heuristic
+    // Get Total Volume Used for Progress Bar Heuristic & macOS UI Alignment
     struct statfs sfs;
     uint64_t total_volume_used = 0;
     if (statfs(scan_root, &sfs) == 0) {
-        total_volume_used = (uint64_t)(sfs.f_blocks - sfs.f_bfree) * (uint64_t)sfs.f_bsize;
+        uint64_t total_capacity = (uint64_t)sfs.f_blocks * (uint64_t)sfs.f_bsize;
+        uint64_t available_bytes = (uint64_t)sfs.f_bavail * (uint64_t)sfs.f_bsize; // fallback
+        
+        // Use CoreFoundation to identically match macOS "About This Mac" Available logic
+        CFStringRef pathStr = CFStringCreateWithCString(kCFAllocatorDefault, scan_root, kCFStringEncodingUTF8);
+        if (pathStr) {
+            CFURLRef url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, pathStr, kCFURLPOSIXPathStyle, true);
+            if (url) {
+                CFTypeRef value;
+                if (CFURLCopyResourcePropertyForKey(url, kCFURLVolumeAvailableCapacityForImportantUsageKey, &value, NULL)) {
+                    int64_t avail = 0;
+                    if (CFNumberGetValue((CFNumberRef)value, kCFNumberSInt64Type, &avail)) {
+                        available_bytes = (uint64_t)avail;
+                    }
+                    CFRelease(value);
+                }
+                CFRelease(url);
+            }
+            CFRelease(pathStr);
+        }
+        
+        total_volume_used = total_capacity - available_bytes;
     }
 
     // ── Phase A: Multi-threaded scan ───────────────────────────────
