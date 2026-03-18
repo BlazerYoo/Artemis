@@ -162,7 +162,7 @@ void report_sizes(TreeNode* root, int top_n, double elapsed_secs,
     format_size(hidden_space, hidden_buf, sizeof(hidden_buf));
     format_size(total_volume_used, vol_used_buf, sizeof(vol_used_buf));
 
-    printf("  ┌─ SUMMARY ───────────────────────────────────────────────\n");
+    printf("  ┌─ SUMMARY ────────────────────────────────────────────────\n");
     printf("  │ Scanned Files Size:  %s\n", size_buf);
     printf("  │ Hidden Space:        %s (Snapshots, System, Sandboxes)\n", hidden_buf);
     printf("  │ --------------------------------------------------------\n");
@@ -234,7 +234,7 @@ static void find_cleanup_node(TreeNode* node, char* path_buf, size_t path_len,
 }
 
 void report_cleanup(TreeNode* root) {
-    printf("  ┌─ CLEANUP OPPORTUNITIES ─────────────────────────────────\n");
+    printf("  ┌─ CLEANUP OPPORTUNITIES ──────────────────────────────────\n");
 
     char size_buf[64];
     char path_buf[2048] = "";

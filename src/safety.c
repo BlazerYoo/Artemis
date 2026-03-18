@@ -31,16 +31,16 @@ void check_full_disk_access(void) {
         if (errno == EPERM || errno == EACCES) {
             fprintf(stderr,
                 "\n"
-                "╔══════════════════════════════════════════════════════════════╗\n"
+                "╔═════════════════════════════════════════════════════════════╗\n"
                 "║  ERROR: Full Disk Access is not granted.                    ║\n"
-                "║                                                            ║\n"
+                "║                                                             ║\n"
                 "║  Artemis needs Full Disk Access to scan your entire disk.   ║\n"
-                "║                                                            ║\n"
-                "║  → System Settings → Privacy & Security → Full Disk Access ║\n"
-                "║  → Add Terminal (or your terminal app)                     ║\n"
-                "║                                                            ║\n"
+                "║                                                             ║\n"
+                "║  → System Settings → Privacy & Security → Full Disk Access  ║\n"
+                "║  → Add Terminal (or your terminal app)                      ║\n"
+                "║                                                             ║\n"
                 "║  Then re-run artemis.                                       ║\n"
-                "╚══════════════════════════════════════════════════════════════╝\n"
+                "╚═════════════════════════════════════════════════════════════╝\n"
                 "\n");
             exit(1);
         }
