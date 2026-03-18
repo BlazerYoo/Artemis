@@ -14,6 +14,7 @@
 #include "safety.h"
 #include "tree.h"
 #include "report.h"
+#include "check.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,6 +30,10 @@
 static void print_usage(const char* progname) {
     fprintf(stderr,
         "Usage: %s [OPTIONS] [SCAN_ROOT]\n"
+        "       %s check <FILE>\n"
+        "\n"
+        "Subcommands:\n"
+        "  check FILE  Check whether a file is safe to delete\n"
         "\n"
         "Options:\n"
         "  -n NUM    Show top N entries (default: %d)\n"
@@ -36,7 +41,7 @@ static void print_usage(const char* progname) {
         "  -h        Show this help\n"
         "\n"
         "SCAN_ROOT defaults to /System/Volumes/Data\n",
-        progname, TOP_N_DEFAULT);
+        progname, progname, TOP_N_DEFAULT);
 }
 
 struct ProgressArgs {
@@ -98,6 +103,23 @@ int main(int argc, char* argv[]) {
     printf(" █████   █████ █████      ░░█████ ░░██████  █████░███ █████ █████ ██████ \n");
     printf("░░░░░   ░░░░░ ░░░░░        ░░░░░   ░░░░░░  ░░░░░ ░░░ ░░░░░ ░░░░░ ░░░░░░  \n");
     printf("\n");
+
+    // ── 'check' subcommand ─────────────────────────────────────────
+    if (argc >= 2 && strcmp(argv[1], "check") == 0) {
+        if (argc < 3) {
+            fprintf(stderr, "Usage: %s check <FILE>\n", argv[0]);
+            return 1;
+        }
+        SafeCheckResult result;
+        check_safe_to_delete(argv[2], &result);
+        report_safe_to_delete(&result);
+        // Exit code: 0 = safe, 1 = warnings, 2 = critical
+        if (result.open_user_proc_count > 0 || result.is_in_app_bundle ||
+            (result.is_protected && result.protected_is_critical)) return 2;
+        if (result.spotlight_ref_count > 0 || result.nlink > 1 ||
+            result.is_dylib || result.is_protected) return 1;
+        return 0;
+    }
 
     int top_n = TOP_N_DEFAULT;
     int verbose = 0;

@@ -3,10 +3,10 @@ CFLAGS   = -std=c11 -Wall -Wextra -Wpedantic -Ivendor -Isrc
 RELEASE  = -O3 -mcpu=native -flto
 DEBUG    = -g -O0 -fsanitize=address -DDEBUG
 
-SRCS     = src/main.c src/arena.c src/scanner.c src/workqueue.c src/threads.c src/safety.c src/tree.c src/report.c
+SRCS     = src/main.c src/arena.c src/scanner.c src/workqueue.c src/threads.c src/safety.c src/tree.c src/report.c src/check.c
 TARGET   = artemis
 
-LDFLAGS  = -framework CoreFoundation
+LDFLAGS  = -framework CoreFoundation -framework CoreServices
 
 .PHONY: all debug clean clone_test
 
